@@ -260,3 +260,7 @@ variable "default_vpc_tags" {
   description = "Additional tags for the Default VPC"
   default     = {}
 }
+
+variable "create_public_subnets" {
+  default = "true"
+}

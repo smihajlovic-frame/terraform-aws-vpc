@@ -50,7 +50,7 @@ resource "aws_vpc_dhcp_options_association" "this" {
 # Internet Gateway
 ###################
 resource "aws_internet_gateway" "this" {
-  count = "${var.create_vpc && length(var.public_subnets) > 0 ? 1 : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && length(var.public_subnets) > 0 ? 1 : 0}"
 
   vpc_id = "${aws_vpc.this.id}"
 
@@ -61,7 +61,7 @@ resource "aws_internet_gateway" "this" {
 # Publiс routes
 ################
 resource "aws_route_table" "public" {
-  count = "${var.create_vpc && length(var.public_subnets) > 0 ? 1 : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && length(var.public_subnets) > 0 ? 1 : 0}"
 
   vpc_id = "${aws_vpc.this.id}"
 
@@ -69,7 +69,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route" "public_internet_gateway" {
-  count = "${var.create_vpc && length(var.public_subnets) > 0 ? 1 : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && length(var.public_subnets) > 0 ? 1 : 0}"
 
   route_table_id         = "${aws_route_table.public.id}"
   destination_cidr_block = "0.0.0.0/0"
@@ -113,7 +113,7 @@ resource "aws_route_table" "intra" {
 # Public subnet
 ################
 resource "aws_subnet" "public" {
-  count = "${var.create_vpc && length(var.public_subnets) > 0 && (!var.one_nat_gateway_per_az || length(var.public_subnets) >= length(var.azs)) ? length(var.public_subnets) : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && length(var.public_subnets) > 0 && (!var.one_nat_gateway_per_az || length(var.public_subnets) >= length(var.azs)) ? length(var.public_subnets) : 0}"
 
   vpc_id                  = "${aws_vpc.this.id}"
   cidr_block              = "${var.public_subnets[count.index]}"
@@ -240,7 +240,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "this" {
-  count = "${var.create_vpc && var.enable_nat_gateway ? local.nat_gateway_count : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && var.enable_nat_gateway ? local.nat_gateway_count : 0}"
 
   allocation_id = "${element(local.nat_gateway_ips, (var.single_nat_gateway ? 0 : count.index))}"
   subnet_id     = "${element(aws_subnet.public.*.id, (var.single_nat_gateway ? 0 : count.index))}"
@@ -293,7 +293,7 @@ resource "aws_vpc_endpoint_route_table_association" "intra_s3" {
 }
 
 resource "aws_vpc_endpoint_route_table_association" "public_s3" {
-  count = "${var.create_vpc && var.enable_s3_endpoint && length(var.public_subnets) > 0 ? 1 : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && var.enable_s3_endpoint && length(var.public_subnets) > 0 ? 1 : 0}"
 
   vpc_endpoint_id = "${aws_vpc_endpoint.s3.id}"
   route_table_id  = "${aws_route_table.public.id}"
@@ -330,7 +330,7 @@ resource "aws_vpc_endpoint_route_table_association" "intra_dynamodb" {
 }
 
 resource "aws_vpc_endpoint_route_table_association" "public_dynamodb" {
-  count = "${var.create_vpc && var.enable_dynamodb_endpoint && length(var.public_subnets) > 0 ? 1 : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && var.enable_dynamodb_endpoint && length(var.public_subnets) > 0 ? 1 : 0}"
 
   vpc_endpoint_id = "${aws_vpc_endpoint.dynamodb.id}"
   route_table_id  = "${aws_route_table.public.id}"
@@ -375,7 +375,7 @@ resource "aws_route_table_association" "intra" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = "${var.create_vpc && length(var.public_subnets) > 0 ? length(var.public_subnets) : 0}"
+  count = "${var.create_vpc && var.create_public_subnets && length(var.public_subnets) > 0 ? length(var.public_subnets) : 0}"
 
   subnet_id      = "${element(aws_subnet.public.*.id, count.index)}"
   route_table_id = "${aws_route_table.public.id}"
